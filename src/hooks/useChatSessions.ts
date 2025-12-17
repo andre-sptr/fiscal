@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -29,6 +29,7 @@ export const useChatSessions = () => {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const isInitialized = useRef(false);
 
   // Fetch all sessions
   const fetchSessions = useCallback(async () => {
@@ -194,27 +195,65 @@ export const useChatSessions = () => {
     return sessionId;
   }, [createSession]);
 
-  // Initialize on mount
   useEffect(() => {
-    if (user) {
-      fetchSessions();
-    }
-  }, [user, fetchSessions]);
+    if (!user || isInitialized.current) return;
 
-  // Load first session or create new one
-  useEffect(() => {
-    if (user && sessions.length === 0 && !activeSessionId) {
-      createSession();
-    } else if (sessions.length > 0 && !activeSessionId) {
-      selectSession(sessions[0].id);
+    const initSession = async () => {
+      isInitialized.current = true;
+
+      try {
+        const { data: existingSessions, error } = await supabase
+          .from('chat_sessions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (existingSessions && existingSessions.length > 0) {
+          setSessions(existingSessions);
+          const lastSessionId = existingSessions[0].id;
+          setActiveSessionId(lastSessionId); 
+          
+          await fetchMessages(lastSessionId); 
+        } else {
+          await createSession();
+        }
+      } catch (error) {
+        console.error('Error initializing chat session:', error);
+        isInitialized.current = false;
+      }
+    };
+
+    initSession();
+  }, [user, createSession, fetchMessages]);
+
+  const updateMessageData = useCallback(async (
+    messageId: string,
+    newTransactionData: Message['transaction_data']
+  ) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('messages')
+      .update({ transaction_data: newTransactionData })
+      .eq('id', messageId);
+
+    if (!error) {
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId 
+          ? { ...msg, transaction_data: newTransactionData } 
+          : msg
+      ));
     }
-  }, [user, sessions, activeSessionId, createSession, selectSession]);
+  }, [user]);
 
   return {
     sessions,
     activeSessionId,
     messages,
     isLoading,
+    updateMessageData,
     setIsLoading,
     addMessage,
     updateMessageStatus,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,10 +15,11 @@ import { useToast } from '@/hooks/use-toast';
 interface AddTransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (data?: any) => void; 
+  initialData?: any;
 }
 
-export const AddTransactionDialog = ({ open, onOpenChange, onSuccess }: AddTransactionDialogProps) => {
+export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialData }: AddTransactionDialogProps) => {
   const [mode, setMode] = useState<'manual' | 'receipt'>('manual');
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [amount, setAmount] = useState('');
@@ -31,6 +32,15 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess }: AddTrans
   
   const { user } = useAuth();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (open && initialData) {
+      setAmount(initialData.amount);
+      setType(initialData.type);
+      setCategory(initialData.category);
+      setDescription(initialData.description);
+    }
+  }, [open, initialData]);
 
   const resetForm = () => {
     setAmount('');
@@ -101,10 +111,17 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess }: AddTrans
         title: "Transaksi Berhasil Disimpan",
         description: `${type === 'income' ? 'Pemasukan' : 'Pengeluaran'} ${formatIDR(parseIDRInput(amount))} telah ditambahkan.`,
       });
+
+      const finalAmount = parseIDRInput(amount);
       
       resetForm();
       onOpenChange(false);
-      onSuccess();
+      onSuccess({
+        amount: finalAmount,
+        type,
+        category,
+        description
+      });
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -241,7 +258,7 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess }: AddTrans
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="fiscal-input"
+                className="fiscal-input w-full block [&::-webkit-calendar-picker-indicator]:ml-auto"
               />
             </div>
 

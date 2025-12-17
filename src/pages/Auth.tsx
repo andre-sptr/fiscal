@@ -135,7 +135,7 @@ const Auth = () => {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="nama@email.com"
+                    placeholder="nama@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 fiscal-input"
@@ -197,13 +197,15 @@ const Auth = () => {
               )}
 
               {mode === 'login' && (
-                <button
-                  type="button"
-                  onClick={() => setMode('forgot')}
-                  className="text-sm text-primary hover:underline"
-                >
-                  Lupa password?
-                </button>
+                <div className="flex justify-end w-full">
+                  <button
+                    type="button"
+                    onClick={() => setMode('forgot')}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Lupa password?
+                  </button>
+                </div>
               )}
 
               <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={isLoading}>

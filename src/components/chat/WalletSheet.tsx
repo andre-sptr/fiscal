@@ -169,7 +169,7 @@ export const WalletSheet = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
+      <SheetContent side="right" className="w-full sm:max-w-xl p-0 flex flex-col">
         <SheetHeader className="p-6 pb-0 flex flex-row items-center justify-between">
           <SheetTitle className="text-left">Wallet</SheetTitle>
           <div className="flex items-center gap-2">

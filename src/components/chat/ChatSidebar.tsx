@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Plus, MessageSquare, Settings, LogOut, Menu, X, Trash2 } from 'lucide-react';
+import { Plus, MessageSquare, Settings, LogOut, Menu, X, Trash2, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface ChatSession {
   id: string;
@@ -33,6 +34,7 @@ export const ChatSidebar = ({
 }: ChatSidebarProps) => {
   const { signOut } = useAuth();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleDelete = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
@@ -62,7 +64,7 @@ export const ChatSidebar = ({
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed lg:relative inset-y-0 left-0 z-50 w-72 bg-sidebar flex flex-col border-r border-sidebar-border transition-transform duration-300 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 w-80 bg-sidebar flex flex-col border-r border-sidebar-border transition-transform duration-300 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -71,7 +73,7 @@ export const ChatSidebar = ({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">F</span>
+                <Wallet className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="font-semibold text-sidebar-foreground">Fiscal</span>
             </div>
@@ -130,7 +132,7 @@ export const ChatSidebar = ({
 
         {/* Footer */}
         <div className="p-4 border-t border-sidebar-border space-y-1">
-          <Button variant="ghost" className="w-full justify-start gap-2 text-sidebar-foreground">
+          <Button variant="ghost" className="w-full justify-start gap-2 text-sidebar-foreground" onClick={() => navigate('/settings')}>
             <Settings className="w-4 h-4" />
             Pengaturan
           </Button>

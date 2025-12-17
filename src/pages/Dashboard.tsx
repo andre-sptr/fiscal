@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 import { ChatSidebar } from '@/components/chat/ChatSidebar';
 import { BalanceHeader } from '@/components/chat/BalanceHeader';
 import { ChatMessage } from '@/components/chat/ChatMessage';
@@ -25,6 +25,7 @@ const Dashboard = () => {
     setIsLoading,
     addMessage,
     updateMessageStatus,
+    updateMessageData,
     selectSession,
     startNewChat,
     deleteSession,
@@ -34,6 +35,7 @@ const Dashboard = () => {
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editTransactionData, setEditTransactionData] = useState<any>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const userInitial = user?.email?.charAt(0).toUpperCase() || 'U';
@@ -102,6 +104,18 @@ const Dashboard = () => {
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
+
+    if (content.trim().toLowerCase() === 'edit') {
+      const lastPendingMsg = [...messages].reverse().find(
+        m => m.role === 'assistant' && m.status === 'pending_confirmation'
+      );
+
+      if (lastPendingMsg) {
+        handleEditTransaction(lastPendingMsg);
+        return;
+      }
+    }
+
     setIsLoading(true);
 
     // Add user message
@@ -177,8 +191,8 @@ const Dashboard = () => {
       category: message.transaction_data.category,
       description: message.transaction_data.description || '',
     });
+    setEditingMessageId(message.id);
     setIsAddDialogOpen(true);
-    updateMessageStatus(message.id, 'cancelled');
   };
 
   const handleCancelTransaction = async (message: Message) => {
@@ -254,7 +268,7 @@ const Dashboard = () => {
               // Welcome state
               <div className="flex flex-col items-center justify-center min-h-[60vh] animate-fade-in">
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                  <Sparkles className="w-8 h-8 text-primary" />
+                  <Wallet className="w-8 h-8 text-primary" />
                 </div>
                 <h1 className="text-xl font-semibold mb-2 text-center">
                   Halo! Ada pengeluaran atau pemasukan apa hari ini?
@@ -266,7 +280,7 @@ const Dashboard = () => {
                 {/* Quick suggestions */}
                 <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
                   {[
-                    "Beli makan siang 35rb",
+                    "Beli makan siang 20rb",
                     "Gaji bulan ini 5jt",
                     "Berapa pengeluaran minggu ini?",
                     "Tips menghemat uang",
@@ -337,10 +351,29 @@ const Dashboard = () => {
       {/* Add/Edit Transaction Dialog */}
       <AddTransactionDialog
         open={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
-        onSuccess={() => {
+        onOpenChange={(open) => {
+          setIsAddDialogOpen(open);
+          if (!open) setEditingMessageId(null);
+        }}
+        initialData={editTransactionData} 
+        onSuccess={async (savedData) => {
           refetch();
           setEditTransactionData(null);
+          
+          if (editingMessageId && savedData) {
+            await updateMessageData(editingMessageId, {
+              amount: savedData.amount,
+              type: savedData.type,
+              category: savedData.category,
+              description: savedData.description
+            });
+
+            await updateMessageStatus(editingMessageId, 'confirmed');
+            
+            await addMessage("✅ Data berhasil diperbarui dan disimpan!", 'assistant');
+            
+            setEditingMessageId(null);
+          }
         }}
       />
     </div>

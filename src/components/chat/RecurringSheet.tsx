@@ -129,7 +129,7 @@ export const RecurringSheet = () => {
           Berulang
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
+      <SheetContent side="right" className="w-full sm:max-w-xl p-0 flex flex-col">
         <SheetHeader className="p-6 pb-4 flex flex-row items-center justify-between">
           <SheetTitle className="text-left">Transaksi Berulang</SheetTitle>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -230,6 +230,7 @@ export const RecurringSheet = () => {
                   <Label>Tanggal Pertama</Label>
                   <Input
                     type="date"
+                    className="w-full block [&::-webkit-calendar-picker-indicator]:ml-auto"
                     value={formData.next_due_date}
                     onChange={(e) => setFormData(f => ({ ...f, next_due_date: e.target.value }))}
                     required
