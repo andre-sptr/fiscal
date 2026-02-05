@@ -1,3 +1,4 @@
+// @ts-nocheck - This is a Deno Edge Function, not Node.js
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -17,9 +18,9 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY is not configured');
+    const SUMOPOD_API_KEY = Deno.env.get('SUMOPOD_API_KEY');
+    if (!SUMOPOD_API_KEY) {
+      console.error('SUMOPOD_API_KEY is not configured');
       throw new Error('AI service not configured');
     }
 
@@ -90,25 +91,27 @@ Examples:
       });
     }
 
-    console.log('Calling Lovable AI Gateway...');
-    
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    console.log('Calling Sumopod AI...');
+
+    const response = await fetch('https://ai.sumopod.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${SUMOPOD_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gpt-5.1',
         messages,
-        temperature: 0.3,
+        // gpt-5.1 only supports temperature=1
+        temperature: 1,
+        max_tokens: 1000,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI Gateway error:', response.status, errorText);
-      
+
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ success: false, message: 'Terlalu banyak permintaan. Coba lagi nanti.' }),
@@ -121,21 +124,21 @@ Examples:
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       throw new Error(`AI service error: ${response.status}`);
     }
 
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content;
-    
+
     console.log('AI Response:', aiResponse);
 
     // Parse JSON from AI response
     let result;
     try {
       // Extract JSON from response (handle markdown code blocks)
-      const jsonMatch = aiResponse.match(/```json\n?([\s\S]*?)\n?```/) || 
-                        aiResponse.match(/\{[\s\S]*\}/);
+      const jsonMatch = aiResponse.match(/```json\n?([\s\S]*?)\n?```/) ||
+        aiResponse.match(/\{[\s\S]*\}/);
       const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : aiResponse;
       result = JSON.parse(jsonStr);
     } catch (parseError) {
@@ -154,9 +157,9 @@ Examples:
   } catch (error) {
     console.error('Error in parse-transaction:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        message: 'Terjadi kesalahan. Silakan coba lagi.' 
+      JSON.stringify({
+        success: false,
+        message: 'Terjadi kesalahan. Silakan coba lagi.'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -36,7 +36,7 @@ export const categories: Category[] = [
   { id: 'travel', name: 'Liburan', icon: Plane, type: 'expense' },
   { id: 'gifts', name: 'Hadiah & Donasi', icon: Gift, type: 'expense' },
   { id: 'entertainment', name: 'Hiburan', icon: Sparkles, type: 'expense' },
-  
+
   // Income categories
   { id: 'salary', name: 'Gaji', icon: Briefcase, type: 'income' },
   { id: 'investment', name: 'Investasi', icon: TrendingUp, type: 'income' },
@@ -57,3 +57,13 @@ export const getCategoryIcon = (categoryName: string): LucideIcon => {
   const category = categories.find(cat => cat.name === categoryName);
   return category?.icon ?? Wallet;
 };
+
+// Export expense category names for budget goals
+export const EXPENSE_CATEGORIES = categories
+  .filter(cat => cat.type === 'expense')
+  .map(cat => cat.name);
+
+// Export income category names
+export const INCOME_CATEGORIES = categories
+  .filter(cat => cat.type === 'income')
+  .map(cat => cat.name);

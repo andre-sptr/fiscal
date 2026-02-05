@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ArrowLeft, Send, Loader2, Wallet, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTransactions } from '@/hooks/useTransactions';
-import { formatIDR } from '@/lib/currency';
+import { askFiscalAI } from '@/services/sumopodAI';
 
 interface Message {
   id: string;
@@ -38,79 +38,6 @@ const Chat = () => {
     scrollToBottom();
   }, [messages]);
 
-  const generateResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    // Calculate this week's transactions
-    const today = new Date();
-    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const weekTransactions = transactions.filter(t => new Date(t.date) >= weekAgo);
-    const weekExpense = weekTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-    const weekIncome = weekTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-
-    // Calculate category breakdown
-    const categoryTotals: Record<string, number> = {};
-    transactions.filter(t => t.type === 'expense').forEach(t => {
-      categoryTotals[t.category] = (categoryTotals[t.category] || 0) + Number(t.amount);
-    });
-    const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
-
-    if (lowerMessage.includes('minggu') || lowerMessage.includes('week')) {
-      return `📊 **Ringkasan Minggu Ini:**\n\n` +
-        `💰 Total Pemasukan: ${formatIDR(weekIncome)}\n` +
-        `💸 Total Pengeluaran: ${formatIDR(weekExpense)}\n` +
-        `📈 Selisih: ${formatIDR(weekIncome - weekExpense)}\n\n` +
-        `Kamu memiliki ${weekTransactions.length} transaksi minggu ini.`;
-    }
-
-    if (lowerMessage.includes('kategori') || lowerMessage.includes('category') || lowerMessage.includes('paling banyak')) {
-      if (!topCategory) {
-        return "Kamu belum memiliki transaksi pengeluaran. Mulai catat transaksimu untuk melihat analisis kategori!";
-      }
-      return `📊 **Analisis Kategori Pengeluaran:**\n\n` +
-        `Kategori dengan pengeluaran terbesar adalah **${topCategory[0]}** dengan total ${formatIDR(topCategory[1])}.\n\n` +
-        Object.entries(categoryTotals)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 5)
-          .map((cat, i) => `${i + 1}. ${cat[0]}: ${formatIDR(cat[1])}`)
-          .join('\n');
-    }
-
-    if (lowerMessage.includes('tren') || lowerMessage.includes('trend') || lowerMessage.includes('keuangan')) {
-      const ratio = monthlyExpense > 0 ? (monthlyIncome / monthlyExpense).toFixed(2) : 'N/A';
-      return `📈 **Tren Keuangan Bulan Ini:**\n\n` +
-        `💰 Total Saldo: ${formatIDR(totalBalance)}\n` +
-        `📥 Pemasukan Bulan Ini: ${formatIDR(monthlyIncome)}\n` +
-        `📤 Pengeluaran Bulan Ini: ${formatIDR(monthlyExpense)}\n` +
-        `📊 Rasio Income/Expense: ${ratio}x\n\n` +
-        (monthlyIncome > monthlyExpense 
-          ? "✅ Bagus! Pemasukanmu lebih besar dari pengeluaran."
-          : "⚠️ Perhatian! Pengeluaranmu melebihi pemasukan bulan ini.");
-    }
-
-    if (lowerMessage.includes('tips') || lowerMessage.includes('hemat') || lowerMessage.includes('saran')) {
-      return `💡 **Tips Menghemat Uang:**\n\n` +
-        `1. **50/30/20 Rule**: Alokasikan 50% untuk kebutuhan, 30% keinginan, 20% tabungan.\n\n` +
-        `2. **Catat Semua Transaksi**: Gunakan Fiscal untuk melacak setiap pengeluaran.\n\n` +
-        `3. **Buat Budget Bulanan**: Tentukan batas pengeluaran per kategori.\n\n` +
-        `4. **Review Mingguan**: Cek pengeluaran setiap minggu untuk tetap on track.\n\n` +
-        `5. **Darurat Fund**: Simpan 3-6 bulan pengeluaran untuk dana darurat.`;
-    }
-
-    return `Halo! Saya Fiscal AI Assistant. Berikut ringkasan keuanganmu:\n\n` +
-      `💰 Total Saldo: ${formatIDR(totalBalance)}\n` +
-      `📥 Pemasukan Bulan Ini: ${formatIDR(monthlyIncome)}\n` +
-      `📤 Pengeluaran Bulan Ini: ${formatIDR(monthlyExpense)}\n\n` +
-      `Ada yang bisa saya bantu? Coba tanyakan:\n` +
-      `• "Berapa pengeluaran saya minggu ini?"\n` +
-      `• "Kategori mana yang paling banyak?"\n` +
-      `• "Tips menghemat uang"`;
-  };
-
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -124,19 +51,41 @@ const Chat = () => {
     setInput('');
     setIsLoading(true);
 
-    // Simulate AI thinking
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      // Prepare recent transactions for context
+      const recentTransactions = transactions.slice(0, 10).map(t => ({
+        amount: Number(t.amount),
+        type: t.type,
+        category: t.category,
+        date: t.date,
+      }));
 
-    const response = generateResponse(userMessage.content);
-    
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: response,
-    };
+      // Call Sumopod AI
+      const response = await askFiscalAI(userMessage.content, {
+        totalBalance,
+        monthlyIncome,
+        monthlyExpense,
+        recentTransactions,
+      });
 
-    setMessages(prev => [...prev, assistantMessage]);
-    setIsLoading(false);
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: response,
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('AI Error:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: '❌ Maaf, terjadi kesalahan saat menghubungi AI. Silakan coba lagi.',
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSuggestion = (question: string) => {
@@ -201,11 +150,10 @@ const Chat = () => {
                   </AvatarFallback>
                 </Avatar>
                 <div
-                  className={`max-w-[80%] p-4 rounded-2xl ${
-                    message.role === 'user'
+                  className={`max-w-[80%] p-4 rounded-2xl ${message.role === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'fiscal-card'
-                  }`}
+                    }`}
                 >
                   <p className="whitespace-pre-wrap text-sm">{message.content}</p>
                 </div>
@@ -239,8 +187,8 @@ const Chat = () => {
             className="fiscal-input"
             disabled={isLoading}
           />
-          <Button 
-            onClick={handleSend} 
+          <Button
+            onClick={handleSend}
             disabled={!input.trim() || isLoading}
             size="icon"
             className="shrink-0"

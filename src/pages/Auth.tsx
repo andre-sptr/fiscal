@@ -22,7 +22,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({});
-  
+
   const { user, signIn, signUp, resetPassword } = useAuth();
   const navigate = useNavigate();
 
@@ -40,7 +40,7 @@ const Auth = () => {
 
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
-    
+
     try {
       emailSchema.parse(email);
     } catch (e) {
@@ -48,7 +48,7 @@ const Auth = () => {
         newErrors.email = e.errors[0].message;
       }
     }
-    
+
     if (mode !== 'forgot') {
       try {
         passwordSchema.parse(password);
@@ -58,11 +58,11 @@ const Auth = () => {
         }
       }
     }
-    
+
     if (mode === 'register' && password !== confirmPassword) {
       newErrors.confirmPassword = 'Password tidak sama';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -70,9 +70,9 @@ const Auth = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
-    
+
     try {
       if (mode === 'login') {
         const { error } = await signIn(email, password);
@@ -90,18 +90,31 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md animate-fade-in">
-        {/* Logo */}
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background orbs */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="floating-orb floating-orb-1" />
+        <div className="floating-orb floating-orb-2" />
+        <div className="floating-orb floating-orb-3" />
+        <div className="absolute top-1/4 right-1/4 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-float-slow" />
+      </div>
+
+      <div className="w-full max-w-md animate-fade-in relative z-10">
+        {/* Logo with enhanced styling */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-4">
-            <Wallet className="w-8 h-8 text-primary-foreground" />
+          <div className="relative inline-block">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-primary/80 mb-4 shadow-fiscal-glow animate-float">
+              <Wallet className="w-10 h-10 text-primary-foreground" />
+            </div>
+            <div className="absolute -inset-2 bg-primary/20 rounded-3xl blur-xl -z-10 animate-pulse-soft" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">Fiscal</h1>
-          <p className="text-muted-foreground mt-1">AI Finance Tracker</p>
+          <h1 className="text-3xl font-bold">
+            <span className="gradient-text">Fiscal</span>
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">AI-Powered Finance Tracker</p>
         </div>
 
-        <Card className="fiscal-card-elevated border-0">
+        <Card className="glass-card border-border/30 shadow-fiscal-xl">
           <CardHeader className="space-y-1 pb-4">
             {mode === 'forgot' && (
               <Button
@@ -125,7 +138,7 @@ const Auth = () => {
               {mode === 'forgot' && 'Masukkan email untuk reset password'}
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">

@@ -6,13 +6,16 @@ import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { WalletSheet } from '@/components/chat/WalletSheet';
 import { AddTransactionDialog } from '@/components/dashboard/AddTransactionDialog';
+import { CommandPalette } from '@/components/ui/CommandPalette';
+import { SpendingAlerts } from '@/components/dashboard/SpendingAlerts';
 import { useAuth } from '@/hooks/useAuth';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useChatSessions, Message } from '@/hooks/useChatSessions';
 import { isQuestion } from '@/lib/parseTransaction';
-import { formatIDR } from '@/lib/currency';
+import { useLanguage } from '@/hooks/useLanguage';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { parseTransaction, askFiscalAI, parseReceiptImage } from '@/services/sumopodAI';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -30,6 +33,7 @@ const Dashboard = () => {
     startNewChat,
     deleteSession,
   } = useChatSessions();
+  const { formatCurrency, t } = useLanguage();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isWalletOpen, setIsWalletOpen] = useState(false);
@@ -48,10 +52,35 @@ const Dashboard = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Generate local response for questions using transaction data
-  const generateQuestionResponse = (userMessage: string): string => {
+  // Generate response using Sumopod AI for questions
+  const generateQuestionResponse = async (userMessage: string): Promise<string> => {
+    try {
+      const recentTransactions = transactions.slice(0, 10).map(t => ({
+        amount: Number(t.amount),
+        type: t.type,
+        category: t.category,
+        date: t.date,
+      }));
+
+      const response = await askFiscalAI(userMessage, {
+        totalBalance,
+        monthlyIncome,
+        monthlyExpense,
+        recentTransactions,
+      });
+
+      return response;
+    } catch (error) {
+      console.error('AI error:', error);
+      // Fallback to local response
+      return generateLocalResponse(userMessage);
+    }
+  };
+
+  // Local fallback response generator
+  const generateLocalResponse = (userMessage: string): string => {
     const lowerMessage = userMessage.toLowerCase();
-    
+
     const today = new Date();
     const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
     const weekTransactions = transactions.filter(t => new Date(t.date) >= weekAgo);
@@ -65,39 +94,39 @@ const Dashboard = () => {
     const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
 
     if (lowerMessage.includes('minggu') || lowerMessage.includes('week')) {
-      return `📊 Minggu ini:\n\n💰 Pemasukan: ${formatIDR(weekIncome)}\n💸 Pengeluaran: ${formatIDR(weekExpense)}\n📈 Selisih: ${formatIDR(weekIncome - weekExpense)}`;
+      return `📊 Minggu ini:\n\n💰 Pemasukan: ${formatCurrency(weekIncome)}\n💸 Pengeluaran: ${formatCurrency(weekExpense)}\n📈 Selisih: ${formatCurrency(weekIncome - weekExpense)}`;
     }
 
     if (lowerMessage.includes('kategori') || lowerMessage.includes('paling banyak')) {
       if (!topCategory) return "Belum ada data pengeluaran untuk dianalisis.";
-      return `Pengeluaran terbesar: ${topCategory[0]} (${formatIDR(topCategory[1])})`;
+      return `Pengeluaran terbesar: ${topCategory[0]} (${formatCurrency(topCategory[1])})`;
     }
 
     if (lowerMessage.includes('tips') || lowerMessage.includes('hemat')) {
       return "💡 Tips: Coba aturan 50/30/20 — 50% kebutuhan, 30% keinginan, 20% tabungan!";
     }
 
-    return `💰 Saldo: ${formatIDR(totalBalance)}\n📥 Pemasukan bulan ini: ${formatIDR(monthlyIncome)}\n📤 Pengeluaran bulan ini: ${formatIDR(monthlyExpense)}`;
+    return `💰 Saldo: ${formatCurrency(totalBalance)}\n📥 Pemasukan bulan ini: ${formatCurrency(monthlyIncome)}\n📤 Pengeluaran bulan ini: ${formatCurrency(monthlyExpense)}`;
   };
 
-  // Call AI edge function to parse transaction
-  const parseTransactionWithAI = async (content: string, type: 'text' | 'image') => {
+  // Parse transaction using Sumopod AI
+  const parseTransactionWithAI = async (content: string): Promise<{
+    success: boolean;
+    transaction?: {
+      amount: number;
+      type: 'income' | 'expense';
+      category: string;
+      description: string;
+    };
+    message: string;
+  }> => {
     try {
-      const { data, error } = await supabase.functions.invoke('parse-transaction', {
-        body: { type, content }
-      });
-
-      if (error) {
-        console.error('Edge function error:', error);
-        throw error;
-      }
-
-      return data;
-    } catch (err) {
-      console.error('Failed to parse transaction:', err);
-      return { 
-        success: false, 
-        message: 'Gagal memproses. Coba lagi.' 
+      return await parseTransaction(content);
+    } catch (error) {
+      console.error('Failed to parse transaction:', error);
+      return {
+        success: false,
+        message: 'Gagal memproses. Coba lagi.'
       };
     }
   };
@@ -124,19 +153,19 @@ const Dashboard = () => {
     try {
       // Check if it's a question or transaction
       if (isQuestion(content)) {
-        // Handle as question locally (faster)
-        const response = generateQuestionResponse(content);
+        // Handle as question with AI
+        const response = await generateQuestionResponse(content);
         await addMessage(response, 'assistant');
       } else {
         // Use AI to parse transaction
-        const result = await parseTransactionWithAI(content, 'text');
-        
+        const result = await parseTransactionWithAI(content);
+
         if (result.success && result.transaction) {
           const { amount, type, category, description } = result.transaction;
           const transactionData = { amount, type, category, description };
-          
+
           await addMessage(
-            result.message || `Oke, saya catat ${formatIDR(amount)} untuk "${category}". Benar?`,
+            result.message || `Oke, saya catat ${formatCurrency(amount)} untuk "${category}". Benar?`,
             'assistant',
             transactionData,
             'pending_confirmation'
@@ -213,15 +242,15 @@ const Dashboard = () => {
         reader.readAsDataURL(file);
       });
 
-      // Call AI to parse receipt
-      const result = await parseTransactionWithAI(base64, 'image');
+      // Call Sumopod AI to parse receipt image
+      const result = await parseReceiptImage(base64);
 
       if (result.success && result.transaction) {
         const { amount, type, category, description } = result.transaction;
         const transactionData = { amount, type, category, description };
-        
+
         await addMessage(
-          result.message || `Saya menemukan transaksi ${formatIDR(amount)} untuk "${category}". Benar?`,
+          result.message || `Saya menemukan transaksi ${formatCurrency(amount)} untuk "${category}". Benar?`,
           'assistant',
           transactionData,
           'pending_confirmation'
@@ -256,41 +285,64 @@ const Dashboard = () => {
       {/* Main chat area */}
       <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
         {/* Balance header */}
-        <BalanceHeader 
-          balance={totalBalance} 
-          onClick={() => setIsWalletOpen(true)} 
+        <BalanceHeader
+          balance={totalBalance}
+          monthlyIncome={monthlyIncome}
+          monthlyExpense={monthlyExpense}
+          onClick={() => setIsWalletOpen(true)}
         />
 
         {/* Messages area */}
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-4 py-6">
+            {/* Smart Spending Alerts */}
+            <div className="mb-6">
+              <SpendingAlerts />
+            </div>
+
             {messages.length === 0 ? (
               // Welcome state
-              <div className="flex flex-col items-center justify-center min-h-[60vh] animate-fade-in">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                  <Wallet className="w-8 h-8 text-primary" />
+              <div className="flex flex-col items-center justify-center min-h-[60vh] animate-fade-in relative">
+                {/* Floating orbs background */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <div className="floating-orb floating-orb-1" />
+                  <div className="floating-orb floating-orb-2" />
+                  <div className="floating-orb floating-orb-3" />
                 </div>
-                <h1 className="text-xl font-semibold mb-2 text-center">
-                  Halo! Ada pengeluaran atau pemasukan apa hari ini?
+
+                {/* Animated logo */}
+                <div className="relative mb-8">
+                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-fiscal-glow animate-float">
+                    <Wallet className="w-10 h-10 text-primary-foreground" />
+                  </div>
+                  <div className="absolute -inset-2 bg-primary/20 rounded-3xl blur-xl -z-10 animate-pulse-soft" />
+                </div>
+
+                <h1 className="text-2xl font-bold mb-3 text-center">
+                  {t('dashboard.welcome')} <span className="gradient-text">Fiscal AI</span> {t('dashboard.welcomeSubtitle')}
                 </h1>
-                <p className="text-muted-foreground text-center text-sm max-w-md mb-8">
-                  Ketik transaksi seperti "Habis beli kopi 25rb" atau upload struk dengan tombol klip di bawah.
+                <p className="text-muted-foreground text-center text-sm max-w-md mb-10 leading-relaxed">
+                  {t('dashboard.intro')}
                 </p>
 
                 {/* Quick suggestions */}
-                <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
+                <div className="grid grid-cols-2 gap-3 w-full max-w-md">
                   {[
-                    "Beli makan siang 20rb",
-                    "Gaji bulan ini 5jt",
-                    "Berapa pengeluaran minggu ini?",
-                    "Tips menghemat uang",
+                    { text: t('dashboard.suggestion.expense'), icon: "expense" },
+                    { text: t('dashboard.suggestion.income'), icon: "income" },
+                    { text: t('dashboard.suggestion.analytics'), icon: "analytics" },
+                    { text: t('dashboard.suggestion.tips'), icon: "tips" },
                   ].map((suggestion, i) => (
                     <button
                       key={i}
-                      onClick={() => handleSendMessage(suggestion)}
-                      className="p-3 text-sm text-left bg-secondary/50 hover:bg-secondary rounded-xl transition-colors border border-border/50"
+                      onClick={() => handleSendMessage(suggestion.text.replace(/^[^\s]+\s/, ''))}
+                      className="group p-4 text-sm text-left glass-card hover:shadow-fiscal-lg rounded-2xl transition-all duration-300 hover:-translate-y-1 border-border/30"
+                      style={{ animationDelay: `${i * 100}ms` }}
                     >
-                      {suggestion}
+                      <span className="text-lg mb-1 block">{suggestion.text.split(' ')[0]}</span>
+                      <span className="text-muted-foreground group-hover:text-foreground transition-colors">
+                        {suggestion.text.split(' ').slice(1).join(' ')}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -307,8 +359,8 @@ const Dashboard = () => {
                     transactionData={message.transaction_data || undefined}
                     transactionStatus={
                       message.status === 'pending_confirmation' ? 'pending' :
-                      message.status === 'confirmed' ? 'confirmed' :
-                      message.status === 'cancelled' ? 'cancelled' : undefined
+                        message.status === 'confirmed' ? 'confirmed' :
+                          message.status === 'cancelled' ? 'cancelled' : undefined
                     }
                     onConfirmTransaction={() => handleConfirmTransaction(message)}
                     onEditTransaction={() => handleEditTransaction(message)}
@@ -319,7 +371,7 @@ const Dashboard = () => {
                 {isLoading && (
                   <ChatMessage
                     role="assistant"
-                    content="Sedang memproses..."
+                    content={t('common.processing')}
                     isProcessing
                   />
                 )}
@@ -355,11 +407,11 @@ const Dashboard = () => {
           setIsAddDialogOpen(open);
           if (!open) setEditingMessageId(null);
         }}
-        initialData={editTransactionData} 
+        initialData={editTransactionData}
         onSuccess={async (savedData) => {
           refetch();
           setEditTransactionData(null);
-          
+
           if (editingMessageId && savedData) {
             await updateMessageData(editingMessageId, {
               amount: savedData.amount,
@@ -369,12 +421,25 @@ const Dashboard = () => {
             });
 
             await updateMessageStatus(editingMessageId, 'confirmed');
-            
+
             await addMessage("✅ Data berhasil diperbarui dan disimpan!", 'assistant');
-            
+
             setEditingMessageId(null);
           }
         }}
+      />
+
+      {/* Command Palette - Ctrl+K */}
+      <CommandPalette
+        onAddExpense={() => {
+          setEditTransactionData({ type: 'expense' });
+          setIsAddDialogOpen(true);
+        }}
+        onAddIncome={() => {
+          setEditTransactionData({ type: 'income' });
+          setIsAddDialogOpen(true);
+        }}
+        onOpenWallet={() => setIsWalletOpen(true)}
       />
     </div>
   );

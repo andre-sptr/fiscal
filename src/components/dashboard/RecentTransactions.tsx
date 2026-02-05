@@ -40,7 +40,7 @@ export const RecentTransactions = ({ transactions, isLoading }: RecentTransactio
   return (
     <div className="fiscal-card animate-slide-up stagger-3">
       <h3 className="font-semibold text-lg mb-4">Transaksi Terbaru</h3>
-      
+
       {transactions.length === 0 ? (
         <div className="py-8 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted flex items-center justify-center">

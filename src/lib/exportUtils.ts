@@ -2,7 +2,6 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { formatIDR } from './currency';
 
 interface Transaction {
   id: string;
@@ -13,15 +12,15 @@ interface Transaction {
   description?: string | null;
 }
 
-export const exportToCSV = (transactions: Transaction[], filename?: string) => {
-  const headers = ['Tanggal', 'Kategori', 'Deskripsi', 'Tipe', 'Jumlah (IDR)'];
-  
+export const exportToCSV = (transactions: Transaction[], formatter: (amount: number) => string, filename?: string) => {
+  const headers = ['Tanggal', 'Kategori', 'Deskripsi', 'Tipe', 'Jumlah'];
+
   const rows = transactions.map(t => [
     format(new Date(t.date), 'dd MMM yyyy', { locale: id }),
     t.category,
     t.description || '-',
     t.type === 'income' ? 'Pemasukan' : 'Pengeluaran',
-    t.type === 'income' ? t.amount.toString() : `-${t.amount}`,
+    t.type === 'income' ? formatter(t.amount) : `-${formatter(t.amount)}`,
   ]);
 
   // Calculate totals
@@ -33,9 +32,9 @@ export const exportToCSV = (transactions: Transaction[], filename?: string) => {
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   rows.push(['', '', '', '', '']);
-  rows.push(['', '', '', 'Total Pemasukan', totalIncome.toString()]);
-  rows.push(['', '', '', 'Total Pengeluaran', `-${totalExpense}`]);
-  rows.push(['', '', '', 'Saldo', (totalIncome - totalExpense).toString()]);
+  rows.push(['', '', '', 'Total Pemasukan', formatter(totalIncome)]);
+  rows.push(['', '', '', 'Total Pengeluaran', `-${formatter(totalExpense)}`]);
+  rows.push(['', '', '', 'Saldo', formatter(totalIncome - totalExpense)]);
 
   const csvContent = [
     headers.join(','),
@@ -45,7 +44,7 @@ export const exportToCSV = (transactions: Transaction[], filename?: string) => {
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
-  
+
   link.setAttribute('href', url);
   link.setAttribute('download', filename || `fiscal-report-${format(new Date(), 'yyyy-MM-dd')}.csv`);
   link.style.visibility = 'hidden';
@@ -59,6 +58,7 @@ export const exportToPDF = (
   monthlyIncome: number,
   monthlyExpense: number,
   totalBalance: number,
+  formatter: (amount: number) => string,
   filename?: string
 ) => {
   const doc = new jsPDF();
@@ -67,12 +67,12 @@ export const exportToPDF = (
   // Header
   doc.setFillColor(13, 148, 136); // Primary teal color
   doc.rect(0, 0, pageWidth, 40, 'F');
-  
+
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
   doc.text('Fiscal', 20, 25);
-  
+
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text(`Laporan Keuangan - ${format(new Date(), 'MMMM yyyy', { locale: id })}`, 20, 33);
@@ -87,7 +87,7 @@ export const exportToPDF = (
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  
+
   // Summary boxes
   const summaryY = 62;
   const boxWidth = 55;
@@ -102,7 +102,7 @@ export const exportToPDF = (
   doc.setFontSize(11);
   doc.setTextColor(13, 148, 136);
   doc.setFont('helvetica', 'bold');
-  doc.text(formatIDR(totalBalance), 25, summaryY + 18);
+  doc.text(formatter(totalBalance), 25, summaryY + 18);
 
   // Income
   doc.setFillColor(240, 253, 244);
@@ -114,7 +114,7 @@ export const exportToPDF = (
   doc.setFontSize(11);
   doc.setTextColor(34, 197, 94);
   doc.setFont('helvetica', 'bold');
-  doc.text(formatIDR(monthlyIncome), 85, summaryY + 18);
+  doc.text(formatter(monthlyIncome), 85, summaryY + 18);
 
   // Expense
   doc.setFillColor(254, 242, 242);
@@ -126,7 +126,7 @@ export const exportToPDF = (
   doc.setFontSize(11);
   doc.setTextColor(239, 68, 68);
   doc.setFont('helvetica', 'bold');
-  doc.text(formatIDR(monthlyExpense), 145, summaryY + 18);
+  doc.text(formatter(monthlyExpense), 145, summaryY + 18);
 
   // Transaction table
   doc.setTextColor(0, 0, 0);
@@ -139,7 +139,7 @@ export const exportToPDF = (
     t.category,
     t.description || '-',
     t.type === 'income' ? 'Pemasukan' : 'Pengeluaran',
-    t.type === 'income' ? `+${formatIDR(t.amount)}` : `-${formatIDR(t.amount)}`,
+    t.type === 'income' ? `+${formatter(t.amount)}` : `-${formatter(t.amount)}`,
   ]);
 
   autoTable(doc, {

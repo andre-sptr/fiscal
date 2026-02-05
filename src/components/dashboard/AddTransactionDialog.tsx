@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Camera, FileText, Loader2, ArrowDownLeft, ArrowUpRight, Check } from 'lucide-react';
-import { formatIDR, parseIDRInput } from '@/lib/currency';
+import { parseIDRInput } from '@/lib/currency';
+import { useLanguage } from '@/hooks/useLanguage';
 import { categories, getCategoriesByType } from '@/lib/categories';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 interface AddTransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: (data?: any) => void; 
+  onSuccess: (data?: any) => void;
   initialData?: any;
 }
 
@@ -29,9 +30,10 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
-  
+
   const { user } = useAuth();
   const { toast } = useToast();
+  const { formatCurrency, t } = useLanguage();
 
   useEffect(() => {
     if (open && initialData) {
@@ -68,14 +70,14 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
     // Simulate AI processing
     setIsProcessing(true);
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     // Mock extracted data
     setAmount('150000');
     setCategory('food');
     setDescription('Makan siang - Warung Padang');
     setType('expense');
     setIsProcessing(false);
-    
+
     toast({
       title: "Struk Berhasil Diproses",
       description: "Data telah diekstrak. Silakan review dan konfirmasi.",
@@ -93,7 +95,7 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
     }
 
     setIsLoading(true);
-    
+
     try {
       const { error } = await supabase.from('transactions').insert({
         user_id: user.id,
@@ -109,11 +111,11 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
 
       toast({
         title: "Transaksi Berhasil Disimpan",
-        description: `${type === 'income' ? 'Pemasukan' : 'Pengeluaran'} ${formatIDR(parseIDRInput(amount))} telah ditambahkan.`,
+        description: `${type === 'income' ? 'Pemasukan' : 'Pengeluaran'} ${formatCurrency(parseIDRInput(amount))} telah ditambahkan.`,
       });
 
       const finalAmount = parseIDRInput(amount);
-      
+
       resetForm();
       onOpenChange(false);
       onSuccess({
@@ -139,18 +141,18 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Tambah Transaksi</DialogTitle>
+          <DialogTitle>{t('transaction.add')}</DialogTitle>
         </DialogHeader>
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as 'manual' | 'receipt')} className="mt-2">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="manual" className="gap-2">
               <FileText className="w-4 h-4" />
-              Manual
+              {t('transaction.manual')}
             </TabsTrigger>
             <TabsTrigger value="receipt" className="gap-2">
               <Camera className="w-4 h-4" />
-              Upload Struk
+              {t('transaction.receipt')}
             </TabsTrigger>
           </TabsList>
 
@@ -158,7 +160,7 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
             {!receiptPreview ? (
               <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border rounded-2xl cursor-pointer hover:bg-muted/50 transition-colors">
                 <Camera className="w-10 h-10 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">Tap untuk upload foto struk</p>
+                <p className="text-sm text-muted-foreground">{t('transaction.receiptPrompt')}</p>
                 <input
                   type="file"
                   accept="image/*"
@@ -177,7 +179,7 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
                 {isProcessing && (
                   <div className="absolute inset-0 bg-background/80 rounded-2xl flex flex-col items-center justify-center">
                     <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
-                    <p className="text-sm font-medium">AI Memproses...</p>
+                    <p className="text-sm font-medium">{t('transaction.aiProcessing')}</p>
                   </div>
                 )}
               </div>
@@ -196,7 +198,7 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
                 onClick={() => setType('expense')}
               >
                 <ArrowUpRight className="w-4 h-4" />
-                Pengeluaran
+                {t('balance.expense')}
               </Button>
               <Button
                 type="button"
@@ -205,13 +207,13 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
                 onClick={() => setType('income')}
               >
                 <ArrowDownLeft className="w-4 h-4" />
-                Pemasukan
+                {t('balance.income')}
               </Button>
             </div>
 
             {/* Amount */}
             <div className="space-y-2">
-              <Label>Jumlah (IDR)</Label>
+              <Label>{t('transaction.amount')}</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">Rp</span>
                 <Input
@@ -227,7 +229,7 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
 
             {/* Category */}
             <div className="space-y-2">
-              <Label>Kategori</Label>
+              <Label>{t('transaction.category')}</Label>
               <div className="grid grid-cols-4 gap-2">
                 {filteredCategories.slice(0, 8).map((cat) => {
                   const Icon = cat.icon;
@@ -237,11 +239,10 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
                       key={cat.id}
                       type="button"
                       onClick={() => setCategory(cat.id)}
-                      className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
-                        isSelected 
-                          ? 'border-primary bg-primary/10' 
-                          : 'border-transparent bg-muted hover:bg-muted/80'
-                      }`}
+                      className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${isSelected
+                        ? 'border-primary bg-primary/10'
+                        : 'border-transparent bg-muted hover:bg-muted/80'
+                        }`}
                     >
                       <Icon className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
                       <span className="text-xs text-center line-clamp-1">{cat.name.split(' ')[0]}</span>
@@ -253,7 +254,7 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
 
             {/* Date */}
             <div className="space-y-2">
-              <Label>Tanggal</Label>
+              <Label>{t('transaction.date')}</Label>
               <Input
                 type="date"
                 value={date}
@@ -264,18 +265,18 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
 
             {/* Description */}
             <div className="space-y-2">
-              <Label>Catatan (opsional)</Label>
+              <Label>{t('transaction.note')}</Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Tambahkan catatan..."
+                placeholder={t('transaction.notePlaceholder')}
                 className="fiscal-input resize-none"
                 rows={2}
               />
             </div>
 
-            <Button 
-              className="w-full h-12 text-base font-semibold gap-2" 
+            <Button
+              className="w-full h-12 text-base font-semibold gap-2"
               onClick={handleSubmit}
               disabled={isLoading}
             >
@@ -284,7 +285,7 @@ export const AddTransactionDialog = ({ open, onOpenChange, onSuccess, initialDat
               ) : (
                 <Check className="w-4 h-4" />
               )}
-              Simpan Transaksi
+              {t('transaction.save')}
             </Button>
           </div>
         )}

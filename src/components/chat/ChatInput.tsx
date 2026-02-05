@@ -78,9 +78,9 @@ export const ChatInput = ({
           ctx.translate(canvas.width, 0);
           ctx.scale(-1, 1);
         }
-        
+
         ctx.drawImage(videoRef.current, 0, 0);
-        
+
         canvas.toBlob((blob) => {
           if (blob) {
             const file = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
@@ -133,7 +133,7 @@ export const ChatInput = ({
       {/* MODAL KAMERA */}
       <Dialog open={isCameraOpen} onOpenChange={setIsCameraOpen}>
         <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden bg-black border-none shadow-2xl ring-1 ring-white/10 [&>button]:hidden">
-  
+
           {/* Efek Flash Layar */}
           <div className={cn(
             "absolute inset-0 z-50 bg-white pointer-events-none transition-opacity duration-150",
@@ -151,9 +151,9 @@ export const ChatInput = ({
                   {facingMode === 'environment' ? 'Kamera Belakang' : 'Kamera Depan'}
                 </p>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="text-white/80 hover:text-white hover:bg-white/10 rounded-full h-10 w-10 backdrop-blur-md transition-colors"
                 onClick={() => setIsCameraOpen(false)}
               >
@@ -161,18 +161,18 @@ export const ChatInput = ({
               </Button>
             </div>
           </DialogHeader>
-          
+
           {/* Area Viewfinder */}
           <div className="relative aspect-[3/4] w-full bg-neutral-900 overflow-hidden group">
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline 
-              muted 
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
               className={cn(
                 "w-full h-full object-cover transition-transform duration-500",
                 facingMode === 'user' && "scale-x-[-1]"
-              )} 
+              )}
             />
 
             {/* Grid Lines (Rule of Thirds) - Memberikan kesan Pro */}
@@ -189,35 +189,35 @@ export const ChatInput = ({
                 <div></div>
               </div>
             </div>
-            
+
             {/* Control Bar Bawah */}
             <div className="absolute bottom-0 left-0 right-0 z-20 h-36 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col justify-end pb-8">
               <div className="flex items-center justify-evenly px-8">
-                  
-                  {/* Tombol Flip dengan Efek Blur */}
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-white/90 hover:text-white hover:bg-white/10 rounded-full h-12 w-12 backdrop-blur-sm transition-all"
-                    onClick={toggleCameraFlip}
-                  >
-                    <RefreshCw className="w-6 h-6" />
-                  </Button>
 
-                  {/* Tombol Shutter Realistis */}
-                  <button 
-                    onClick={capturePhoto}
-                    className="group/shutter relative flex items-center justify-center p-1 cursor-pointer"
-                  >
-                    {/* Lingkaran Luar */}
-                    <div className="w-20 h-20 rounded-full border-[3px] border-white/80 transition-all duration-300 group-active/shutter:scale-90 group-active/shutter:border-white/50" />
-                    
-                    {/* Lingkaran Dalam (Tombol) */}
-                    <div className="absolute w-16 h-16 rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.4)] transition-all duration-150 group-hover/shutter:scale-95 group-active/shutter:scale-75" />
-                  </button>
+                {/* Tombol Flip dengan Efek Blur */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white/90 hover:text-white hover:bg-white/10 rounded-full h-12 w-12 backdrop-blur-sm transition-all"
+                  onClick={toggleCameraFlip}
+                >
+                  <RefreshCw className="w-6 h-6" />
+                </Button>
 
-                  {/* Spacer Penyeimbang (Kosong agar tombol shutter tetap di tengah) */}
-                  <div className="w-12 h-12" /> 
+                {/* Tombol Shutter Realistis */}
+                <button
+                  onClick={capturePhoto}
+                  className="group/shutter relative flex items-center justify-center p-1 cursor-pointer"
+                >
+                  {/* Lingkaran Luar */}
+                  <div className="w-20 h-20 rounded-full border-[3px] border-white/80 transition-all duration-300 group-active/shutter:scale-90 group-active/shutter:border-white/50" />
+
+                  {/* Lingkaran Dalam (Tombol) */}
+                  <div className="absolute w-16 h-16 rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.4)] transition-all duration-150 group-hover/shutter:scale-95 group-active/shutter:scale-75" />
+                </button>
+
+                {/* Spacer Penyeimbang (Kosong agar tombol shutter tetap di tengah) */}
+                <div className="w-12 h-12" />
               </div>
             </div>
           </div>
@@ -234,28 +234,28 @@ export const ChatInput = ({
       />
 
       {/* CHAT BAR */}
-      <div className="bg-background border-t border-border p-4">
+      <div className="glass-panel border-t border-border/30 p-4">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-end gap-2 bg-secondary/50 rounded-2xl p-2 border border-border/50">
+          <div className="flex items-end gap-2 bg-secondary/30 rounded-2xl p-2 border border-border/30 shadow-fiscal-sm focus-within:shadow-fiscal-md focus-within:border-primary/30 transition-all duration-300">
             {/* Menu Lampiran */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="shrink-0 rounded-xl h-10 w-10"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 rounded-xl h-10 w-10 hover:bg-muted"
                   disabled={disabled || isLoading}
                 >
                   <Paperclip className="w-5 h-5 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                  <ImageIcon className="w-4 h-4 mr-2" />
+              <DropdownMenuContent align="start" className="w-48 glass-card border-border/30">
+                <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="gap-2 cursor-pointer">
+                  <ImageIcon className="w-4 h-4" />
                   Upload Struk
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsCameraOpen(true)}>
-                  <Camera className="w-4 h-4 mr-2" />
+                <DropdownMenuItem onClick={() => setIsCameraOpen(true)} className="gap-2 cursor-pointer">
+                  <Camera className="w-4 h-4" />
                   Ambil Foto
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -277,22 +277,27 @@ export const ChatInput = ({
             />
 
             {/* Tombol Kirim */}
-            <Button 
-              size="icon"
-              onClick={handleSend}
-              disabled={!input.trim() || disabled || isLoading}
-              className="shrink-0 rounded-xl h-10 w-10"
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
+            <div className="relative">
+              <Button
+                size="icon"
+                onClick={handleSend}
+                disabled={!input.trim() || disabled || isLoading}
+                className="shrink-0 rounded-xl h-10 w-10 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-fiscal-sm hover:shadow-fiscal-md transition-all"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+              {input.trim() && !isLoading && (
+                <div className="absolute -inset-1 bg-primary/20 rounded-xl blur-md -z-10 animate-pulse-soft" />
               )}
-            </Button>
+            </div>
           </div>
 
-          <p className="text-xs text-center text-muted-foreground mt-2">
-            &copy; {new Date().getFullYear()} Andre Saputra
+          <p className="text-[10px] text-center text-muted-foreground/60 mt-2">
+            &copy; {new Date().getFullYear()} Fiscal AI • Roger Sumatera
           </p>
         </div>
       </div>

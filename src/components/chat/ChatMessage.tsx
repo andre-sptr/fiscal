@@ -1,4 +1,5 @@
-import { Wallet } from 'lucide-react';
+import { Wallet, Sparkles } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { TransactionCard, TransactionData } from './TransactionCard';
 import { cn } from '@/lib/utils';
@@ -34,20 +35,22 @@ export const ChatMessage = ({
       isUser ? "flex-row-reverse" : ""
     )}>
       {/* Avatar */}
-      <Avatar className="w-8 h-8 shrink-0">
-        <AvatarFallback className={cn(
-          "text-xs font-medium",
-          isUser 
-            ? "bg-primary text-primary-foreground" 
-            : "bg-transparent"
-        )}>
-          {isUser ? userInitial : (
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Wallet className="w-4 h-4 text-primary" />
+      <div className="shrink-0">
+        {isUser ? (
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground font-semibold text-sm shadow-fiscal-sm">
+            {userInitial}
+          </div>
+        ) : (
+          <div className="relative">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20">
+              <Sparkles className="w-4 h-4 text-primary" />
             </div>
-          )}
-        </AvatarFallback>
-      </Avatar>
+            {isProcessing && (
+              <div className="absolute -inset-0.5 bg-primary/20 rounded-xl blur-sm animate-pulse-soft -z-10" />
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Message content */}
       <div className={cn(
@@ -58,36 +61,44 @@ export const ChatMessage = ({
         {content && (
           <div
             className={cn(
-              "px-4 py-3 rounded-2xl text-sm",
+              "px-4 py-3 rounded-2xl text-sm transition-all duration-300",
               isUser
-                ? "bg-secondary text-secondary-foreground rounded-tr-sm"
-                : "bg-transparent"
+                ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground rounded-tr-lg shadow-fiscal-sm"
+                : "glass-card border-border/30 rounded-tl-lg"
             )}
           >
             {isProcessing ? (
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="flex items-center gap-3">
+                {/* Typing indicator dots */}
+                <div className="flex gap-1.5">
+                  <div className="typing-dot" />
+                  <div className="typing-dot" />
+                  <div className="typing-dot" />
                 </div>
-                <span className="text-muted-foreground">{content}</span>
+                <span className="text-muted-foreground text-xs">{content}</span>
               </div>
             ) : (
-              <p className="whitespace-pre-wrap">{content}</p>
+              <div className={cn(
+                "prose prose-sm max-w-none break-words",
+                isUser ? "prose-invert dark:prose-invert" : "dark:prose-invert"
+              )}>
+                <ReactMarkdown>{content}</ReactMarkdown>
+              </div>
             )}
           </div>
         )}
 
         {/* Transaction card */}
         {transactionData && transactionStatus && (
-          <TransactionCard
-            data={transactionData}
-            status={transactionStatus}
-            onConfirm={onConfirmTransaction}
-            onEdit={onEditTransaction}
-            onCancel={onCancelTransaction}
-          />
+          <div className="animate-scale-in">
+            <TransactionCard
+              data={transactionData}
+              status={transactionStatus}
+              onConfirm={onConfirmTransaction}
+              onEdit={onEditTransaction}
+              onCancel={onCancelTransaction}
+            />
+          </div>
         )}
       </div>
     </div>
