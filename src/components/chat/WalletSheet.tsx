@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useLanguage } from '@/hooks/useLanguage';
 import { exportToCSV, exportToPDF } from '@/lib/exportUtils';
 import { TransactionItem } from '@/components/dashboard/TransactionItem';
@@ -160,7 +160,10 @@ export const WalletSheet = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-[735px] p-0 flex flex-col border-l border-border/30 glass-panel">
+      <SheetContent
+        side="right"
+        className="w-[100vw] h-[100dvh] sm:h-full sm:max-w-[735px] p-0 flex flex-col border-l border-border/30 glass-panel"
+      >
         <SheetHeader className="p-6 pb-4 border-b border-border/30">
           <SheetTitle className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -199,8 +202,8 @@ export const WalletSheet = ({
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
-          <div className="p-6 space-y-6">
+        <ScrollArea className="flex-1 w-full">
+          <div className="p-6 space-y-6 min-w-full">
             {/* Balance Card */}
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-6 shadow-fiscal-lg group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
@@ -431,6 +434,7 @@ export const WalletSheet = ({
               </div>
             </div>
           </div>
+          <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </SheetContent>
     </Sheet>
