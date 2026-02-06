@@ -267,7 +267,7 @@ export const ChatInput = ({
               value={input}
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
-              placeholder="Ketik transaksi atau tanya sesuatu..."
+              placeholder="Ketik transaksi..."
               className={cn(
                 "flex-1 min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-2 py-2.5 text-sm",
                 "placeholder:text-muted-foreground"

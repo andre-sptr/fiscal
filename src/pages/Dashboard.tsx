@@ -7,6 +7,7 @@ import { ChatInput } from '@/components/chat/ChatInput';
 import { WalletSheet } from '@/components/chat/WalletSheet';
 import { AddTransactionDialog } from '@/components/dashboard/AddTransactionDialog';
 import { CommandPalette } from '@/components/ui/CommandPalette';
+import { MobileNav } from '@/components/layout/MobileNav';
 import { SpendingAlerts } from '@/components/dashboard/SpendingAlerts';
 import { useAuth } from '@/hooks/useAuth';
 import { useTransactions } from '@/hooks/useTransactions';
@@ -293,7 +294,7 @@ const Dashboard = () => {
         />
 
         {/* Messages area */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
           <div className="max-w-3xl mx-auto px-4 py-6">
             {/* Smart Spending Alerts */}
             <div className="mb-6">
@@ -383,11 +384,13 @@ const Dashboard = () => {
         </main>
 
         {/* Input area */}
-        <ChatInput
-          onSend={handleSendMessage}
-          onUploadReceipt={handleUploadReceipt}
-          isLoading={isLoading}
-        />
+        <div className="pb-16 lg:pb-0">
+          <ChatInput
+            onSend={handleSendMessage}
+            onUploadReceipt={handleUploadReceipt}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
 
       {/* Wallet Sheet */}
@@ -441,6 +444,12 @@ const Dashboard = () => {
         }}
         onOpenWallet={() => setIsWalletOpen(true)}
       />
+      {/* Mobile Navigation */}
+      <MobileNav
+        onOpenWallet={() => setIsWalletOpen(true)}
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+      />
+
     </div>
   );
 };
